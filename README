@@ -1,0 +1,26 @@
+apache-netlog
+ Apache custom logger that logs locally and over the network.
+ -u --url URL           Add a log destination.
+ -H --host              Value host in HTTP POST message.
+ -l --logfile           Value of logfile in HTTP POST message.
+ -f --keyfile KEYFILE   Shared key for AES encryption in file.
+ -k --key KEY           Shared key for AES encryption.
+ -a --facility FAC      Syslog facility to use [daemon].
+ -D --disabletime S     Disabling time before retry of failed URL in seconds [10].
+ -T --timeout MS        Timeout for establishing connection in milliseconds [1000].
+ -I --interval MS       Polling interval when delivery processes are active in milliseconds [10].
+ -F --maxfail N         Maximum number of failures before disabling URL [2].
+
+apache-netlog-unpack
+ Unpack an encrypted message sent from apache-netlog.
+ -n --nonce NONCE     Nonce value.
+ -i --iv IV           IV - initial vector.
+ -m --msg MSG         Message.
+ -k --key KEY         Shared KEY for AES decryption.
+ -f --keyfile KEYFILE Shared KEY for AES decryption in file.
+ IV and MSG must be base64 encoded strings.
+
+Examples:
+./apache-netlog -u http://host/cgi/netlog.cgi -u file://access.log
+
+./apache-netlog-unpack -k dansahulahula -n 1301993521:2 -i MdiaTVsZy+kU0NjjL4yjGw== -m fbtg3TyATW5/tOSykdVEQ2UAQydL+6iA16ZGVAvbPF/NuQXaB1vv0jm4Dx82oJF/
