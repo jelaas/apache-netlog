@@ -2,7 +2,7 @@
  * File: apache-netlog-unpack.c
  * Implements:
  *
- * Copyright: Jens Låås, 2010
+ * Copyright: Jens Låås, 2011
  * Copyright license: According to GPL, see file COPYING in this directory.
  *
  */
@@ -111,6 +111,8 @@ int main(int argc, char **argv)
 	
 	if(msg && nonce && ivs)
 		rc = unpack(nonce, (char*)msg, msglen);
+	else
+		fprintf(stderr, "message, nonce or ivs not set!\n");
 	
 	exit(rc);
 }
