@@ -26,6 +26,8 @@
 #include "http.h"
 #include "jelist.h"
 
+#define MAXDSTS 16
+
 struct dst {
 	char *url;
 	char nonce[16];
@@ -33,6 +35,7 @@ struct dst {
 	time_t disabled_until;
 	pid_t pid;
 	int failures;
+	int pipefd;
 };
 
 struct logentry {
@@ -178,6 +181,7 @@ int deliver()
 {
 	struct dst *dst;
 	pid_t pid;
+	int fds[2];
 
 	var.active = 0;
 	
@@ -197,15 +201,23 @@ int deliver()
 			var.active++;
 			
 			dst_nonce(dst);
+			if(pipe(fds)) {
+				syslog(conf.facility|LOG_ERR, "pipe(): failed to create pipe fds");
+				continue;
+			}
 			pid = fork();
 			if(pid == 0) {
+				close(fds[0]);
 				_exit(dst_log(dst, conf.log));
 			}
+			close(fds[1]);
 			if(pid == -1) {
+				close(fds[0]);
 				syslog(conf.facility|LOG_ERR, "fork(): failed to create delivery process");
 			}
 			if( pid != -1) {
 				dst->pid = pid;
+				dst->pipefd = fds[0];
 			}
 		}
 	}
@@ -233,6 +245,7 @@ int collect()
 		if(WIFEXITED(status))
 			rc = WEXITSTATUS(status);
 		dst->pid = 0;
+		close(dst->pipefd);
 		if(rc == 0) {
 			logentry = log_find(conf.log, dst->logid);
 			if(logentry) {
@@ -254,6 +267,28 @@ int collect()
 	}
 	
 	return 0;
+}
+
+int populate_poll(struct pollfd *fds)
+{	
+	struct dst *dst;
+	int i=1;
+
+	/* remove logentry when delivered to all */
+	jl_foreach(conf.dsts, dst) {
+		if(dst->pid == 0)
+			continue;
+		fds[i].fd = dst->pipefd;
+		fds[i].events = POLLIN;
+		fds[i].revents = 0;
+		i++;
+		if(i >= MAXDSTS) {
+			syslog(conf.facility|LOG_ERR, "maximum number of concurrent deliveries [%d] reached", MAXDSTS);
+			break;
+		}
+	}
+	
+	return i;
 }
 
 int log_add(struct jlhead *log, char *line)
@@ -280,7 +315,7 @@ int main(int argc, char **argv)
 	ssize_t got;
 	char *buf, *p, *line, *value;
 	int ivalue;
-	struct pollfd fds[1];
+	struct pollfd fds[MAXDSTS+1];
 	struct dst *dst;
 	char name[256];
 	
@@ -417,41 +452,46 @@ int main(int argc, char **argv)
 	pos = 0;
 	buf[pos] = 0;
 	while(1) {
+		int nr_fds;
+		
 		fds[0].fd = 0;
 		fds[0].events = POLLIN;
 		fds[0].revents = 0;
-		rc = poll(fds, 1, var.active?conf.interval_ms:1000);
+		nr_fds = populate_poll(fds);
+		rc = poll(fds, nr_fds, var.active?conf.interval_ms:1000);
 		
 		if(rc != 0) {
-			/* read input */
-			got = read(0, buf+pos, conf.bufsize - pos - 1);
-			if(got == 0) {
-				/* EOF parent died? */
-			}
-			if(got > 0) {
-				pos += got;
-				if(pos >= (conf.bufsize-1)) {
-					syslog(conf.facility|LOG_ERR, "buffer full: %d", conf.bufsize);
-					buf[conf.bufsize-1] = '\n';
-				} else {
-					buf[pos] = 0;
+			if(fds[0].revents) {
+				/* read input */
+				got = read(0, buf+pos, conf.bufsize - pos - 1);
+				if(got == 0) {
+					/* EOF parent died? */
 				}
-			}
-			
-			/* do we have a whole line? */
-			if((p=strchr(buf, '\n'))) {
-				/* extract line and remove from buf */
-				line = strndup(buf, p-buf+1);
-
-				memmove(buf, p, conf.bufsize - pos);
-				pos = 0;
+				if(got > 0) {
+					pos += got;
+					if(pos >= (conf.bufsize-1)) {
+						syslog(conf.facility|LOG_ERR, "buffer full: %d", conf.bufsize);
+						buf[conf.bufsize-1] = '\n';
+					} else {
+						buf[pos] = 0;
+					}
+				}
 				
-				/* put logentry in list */
-				if(line) {
-					log_add(conf.log, line);
-					free(line);
-				} else {
-					syslog(conf.facility|LOG_CRIT, "malloc of logline failed! message lost!");
+				/* do we have a whole line? */
+				if((p=strchr(buf, '\n'))) {
+					/* extract line and remove from buf */
+					line = strndup(buf, p-buf+1);
+					
+					memmove(buf, p, conf.bufsize - pos);
+					pos = 0;
+					
+					/* put logentry in list */
+					if(line) {
+						log_add(conf.log, line);
+						free(line);
+					} else {
+						syslog(conf.facility|LOG_CRIT, "malloc of logline failed! message lost!");
+					}
 				}
 			}
 		}
