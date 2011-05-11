@@ -1,8 +1,8 @@
 /*
  * File: apache-netlog.c
- * Implements:
+ * Implements: apache piped log receiver that send log messages over the net
  *
- * Copyright: Jens Låås, 2010
+ * Copyright: Jens Låås Uppsala University, 2011
  * Copyright license: According to GPL, see file COPYING in this directory.
  *
  */

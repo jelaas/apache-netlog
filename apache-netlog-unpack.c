@@ -1,8 +1,8 @@
 /*
  * File: apache-netlog-unpack.c
- * Implements:
+ * Implements: program for unpacking encrypted messages sent with apache-netlog
  *
- * Copyright: Jens Låås, 2011
+ * Copyright: Jens Låås Uppsala University, 2011
  * Copyright license: According to GPL, see file COPYING in this directory.
  *
  */
