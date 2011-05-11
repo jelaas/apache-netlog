@@ -1,0 +1,83 @@
+#!/bin/bash
+#
+# Simple bash implementation of a apache-netlog receiver.
+# Should work anywhere with a resonably modern version of bash.
+#
+# Copyright: Jens Låås Uppsala University, 2011
+# Copyright license: According to GPL, see file COPYING in this directory.
+
+#
+# Configuration: Start
+#
+
+KEYFILE=/etc/apache-netlog.key
+LOGDIR=/var/log/apache-netlog
+NETLOGHOME=/usr/bin
+
+#
+# Configuration: End
+#
+
+CONTENT_TYPE="multipart/form-data; boundary=----------------------------b6480258127f"
+
+boundary="${CONTENT_TYPE/#*boundary=/}"
+
+function readparts {
+    while read L; do
+	if [ "$L" = "--$boundary" ]; then
+	    read L
+	    name="${L/#*name=/}"
+	    read EMPTY
+	    read value
+	    echo "$name=$value"
+	fi
+    done
+}
+parts=$(cat -|tr -d '\r' |readparts)
+
+nonce=$((grep ^\"nonce\"= <<EOF)
+$parts
+EOF
+)
+
+iv=$((grep ^\"iv\"= <<EOF)
+$parts
+EOF
+)
+msg=$((grep ^\"msg\"= <<EOF)
+$parts
+EOF
+)
+logfile=$((grep ^\"logfile\"= <<EOF)
+$parts
+EOF
+)
+host=$((grep ^\"host\"= <<EOF)
+$parts
+EOF
+)
+
+if [ ! -e "$NETLOGHOME/apache-netlog-unpack" ]; then
+    logger "apache-netlog: $NETLOGHOME/apache-netlog-unpack not found!"
+    exit 1
+fi
+if [ ! -e "$KEYFILE" ]; then
+    logger "apache-netlog: $KEYFILE not found!"
+    exit 1
+fi
+if [ ! -e "$LOGDIR" ]; then
+    logger "apache-netlog: $LOGDIR not found!"
+    exit 1
+fi
+if [ ! -w "$LOGDIR" ]; then
+    logger "apache-netlog: $LOGDIR not writable!"
+    exit 1
+fi
+
+line=$($NETLOGHOME/apache-netlog-unpack -n "$nonce" -i "$iv" -m "$msg" -f $KEYFILE)
+rc=$$
+if [ "$rc" = 0 -a "$host" -a "$logfile" ]; then
+    echo "$line" >> "$LOGDIR/$host-$logfile"
+else
+    logger "apache-netlog: unpack failed"
+fi
