@@ -11,14 +11,12 @@
 #
 
 KEYFILE=/etc/apache-netlog.key
-LOGDIR=/var/log/apache-netlog
+LOGDIR=/var/log/netlog
 NETLOGHOME=/usr/bin
 
 #
 # Configuration: End
 #
-
-CONTENT_TYPE="multipart/form-data; boundary=----------------------------b6480258127f"
 
 boundary="${CONTENT_TYPE/#*boundary=/}"
 
@@ -26,7 +24,8 @@ function readparts {
     while read L; do
 	if [ "$L" = "--$boundary" ]; then
 	    read L
-	    name="${L/#*name=/}"
+	    name="${L/#*name=\"/}"
+	    name="${name/\"/}"
 	    read EMPTY
 	    read value
 	    echo "$name=$value"
@@ -35,24 +34,24 @@ function readparts {
 }
 parts=$(cat -|tr -d '\r' |readparts)
 
-nonce=$((grep ^\"nonce\"= <<EOF)
+nonce=$((grep ^nonce= <<EOF|cut -d = -f 2)
 $parts
 EOF
 )
 
-iv=$((grep ^\"iv\"= <<EOF)
+iv=$((grep ^iv= <<EOF|cut -d = -f 2-)
 $parts
 EOF
 )
-msg=$((grep ^\"msg\"= <<EOF)
+msg=$((grep ^msg= <<EOF|cut -d = -f 2-)
 $parts
 EOF
 )
-logfile=$((grep ^\"logfile\"= <<EOF)
+logfile=$((grep ^logfile= <<EOF|cut -d = -f 2)
 $parts
 EOF
 )
-host=$((grep ^\"host\"= <<EOF)
+host=$((grep ^host= <<EOF|cut -d = -f 2)
 $parts
 EOF
 )
@@ -75,9 +74,10 @@ if [ ! -w "$LOGDIR" ]; then
 fi
 
 line=$($NETLOGHOME/apache-netlog-unpack -n "$nonce" -i "$iv" -m "$msg" -f $KEYFILE)
-rc=$$
+
+rc=$?
 if [ "$rc" = 0 -a "$host" -a "$logfile" ]; then
     echo "$line" >> "$LOGDIR/$host-$logfile"
 else
-    logger "apache-netlog: unpack failed"
+    logger "apache-netlog: unpack failed: $rc"
 fi
