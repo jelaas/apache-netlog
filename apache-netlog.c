@@ -462,10 +462,17 @@ int main(int argc, char **argv)
 		
 		if(rc != 0) {
 			if(fds[0].revents) {
+				if(fds[0].revents & POLLHUP) {
+					/* parent hangup */
+					syslog(conf.facility|LOG_ERR, "parent hung up fd 0");
+					exit(0);
+				}
 				/* read input */
 				got = read(0, buf+pos, conf.bufsize - pos - 1);
 				if(got == 0) {
-					/* EOF parent died? */
+					/* EOF parent died */
+					syslog(conf.facility|LOG_ERR, "parent hung up fd 0");
+					exit(1);
 				}
 				if(got > 0) {
 					pos += got;
