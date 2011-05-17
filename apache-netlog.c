@@ -490,12 +490,21 @@ int main(int argc, char **argv)
 				}
 				
 				/* do we have a whole line? */
-				if((p=strchr(buf, '\n'))) {
+				while((p=strchr(buf, '\n'))) {
+					int linelen;
+					
 					/* extract line and remove from buf */
 					line = strndup(buf, p-buf+1);
 					
-					memmove(buf, p, conf.bufsize - pos);
-					pos = 0;
+					linelen = (p - buf) + 1;
+					
+					memmove(buf, p+1, conf.bufsize - linelen);
+					pos = pos - linelen;
+					if(pos < 0) {
+						syslog(conf.facility|LOG_CRIT, "BUG: pos negative! %d", pos);
+						pos = 0;
+					}
+					buf[pos] = 0;
 					
 					/* put logentry in list */
 					if(line) {
@@ -504,7 +513,6 @@ int main(int argc, char **argv)
 					} else {
 						syslog(conf.facility|LOG_CRIT, "malloc of logline failed! message lost!");
 					}
-					continue;
 				}
 				if(pos >= conf.bufsize) {
 					syslog(conf.facility|LOG_ERR, "buffer full: truncating");
