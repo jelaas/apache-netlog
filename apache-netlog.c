@@ -319,7 +319,7 @@ int main(int argc, char **argv)
 	struct dst *dst;
 	char name[256];
 	
-	conf.bufsize = 2048;
+	conf.bufsize = 4096;
 
 	conf.log = jl_new();
 	conf.dsts = jl_new();
@@ -352,6 +352,7 @@ int main(int argc, char **argv)
 		       " -T --timeout MS        Timeout for establishing connection in milliseconds [1000].\n"
 		       " -I --interval MS       Polling interval when delivery processes are active in milliseconds [10].\n"
 		       " -F --maxfail N         Maximum number of failures before disabling URL [2].\n"
+		       " -B --bufsize N         Set buffer size (for loglines) [4096].\n"
 			);
 		exit(0);
 	}
@@ -371,6 +372,10 @@ int main(int argc, char **argv)
 	while(jelopt_int(argv, 'F', "maxfail",
 		     &ivalue, &err)) {
 		conf.maxfail = ivalue;
+	}
+	while(jelopt_int(argv, 'B', "bufsize",
+		     &ivalue, &err)) {
+		conf.bufsize = ivalue;
 	}
 
 	while(jelopt(argv, 'u', "url",
@@ -476,7 +481,7 @@ int main(int argc, char **argv)
 				}
 				if(got > 0) {
 					pos += got;
-					if(pos >= (conf.bufsize-1)) {
+					if(pos >= conf.bufsize) {
 						syslog(conf.facility|LOG_ERR, "buffer full: %d", conf.bufsize);
 						buf[conf.bufsize-1] = '\n';
 					} else {
@@ -499,6 +504,12 @@ int main(int argc, char **argv)
 					} else {
 						syslog(conf.facility|LOG_CRIT, "malloc of logline failed! message lost!");
 					}
+					continue;
+				}
+				if(pos >= conf.bufsize) {
+					syslog(conf.facility|LOG_ERR, "buffer full: truncating");
+					pos = 39;
+					strcpy(buf+32, "_TRUNC_");
 				}
 			}
 		}
