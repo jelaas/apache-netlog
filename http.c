@@ -10,6 +10,7 @@
 #include <curl/curl.h>
 #include <curl/types.h>
 #include <curl/easy.h>
+#include <string.h>
 
 #include "http.h"
 
@@ -25,10 +26,11 @@ int http_post(const char *url, int timeout_ms,
 {
 	CURL *curl;
 	CURLcode res = -1;
+	long code=0;
 	
 	struct curl_httppost *formpost=NULL;
 	struct curl_httppost *lastptr=NULL;
-	static const char buf[] = "Expect:";
+//	static const char buf[] = "Expect:";
 	
 	if(err) *err = NULL;
 	
@@ -63,6 +65,7 @@ int http_post(const char *url, int timeout_ms,
 	
 	curl = curl_easy_init();
 	if(curl) {
+		
 		/* what URL that receives this POST */
 		curl_easy_setopt(curl, CURLOPT_URL, url);
 		curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
@@ -75,6 +78,8 @@ int http_post(const char *url, int timeout_ms,
 		curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, timeout_ms);
 		
 		res = curl_easy_perform(curl);
+
+		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &code );
 		
 		/* always cleanup */
 		curl_easy_cleanup(curl);
@@ -84,6 +89,12 @@ int http_post(const char *url, int timeout_ms,
 	}
 	if(res) {
 		if(err) *err = curl_easy_strerror(res);
+		if( code >= 400 ) {
+			char error[64];
+			sprintf(error, "http resp code %ld\n", code);
+			*err = strdup(error);
+			res = -2;
+		}
 	}
 	
 	return res;
