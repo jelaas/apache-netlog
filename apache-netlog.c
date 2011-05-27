@@ -140,7 +140,10 @@ int dst_log(struct dst *dst, struct jlhead *log)
 	sprintf(inbuf, "%s\n%s", dst->nonce, logentry->msg);
 	
 	/* create + encrypt + base64code logmessage (nonce,line) */
-	rijndael_setkey(&ctx, conf.key, sizeof(conf.key));
+	if(rijndael_setkey(&ctx, conf.key, sizeof(conf.key))) {
+		syslog(conf.facility|LOG_ERR, "rijndael_setkey failed");
+		return 1;
+	}
 	
 	nblocks = (bufsize+16)/16;
 
@@ -336,6 +339,7 @@ int main(int argc, char **argv)
 	if(!conf.host)
 		conf.host = "unknown_host";
 	
+	/* same default key: must match default key in apache-netlog-unpack.c !! */
 	strcpy((char*)conf.key, "dansahulahula");
 	
 	/* parse options */
