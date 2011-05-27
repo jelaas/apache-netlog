@@ -30,7 +30,7 @@
 
 struct dst {
 	char *url;
-	char nonce[16];
+	char nonce[64];
 	unsigned long long logid;
 	time_t disabled_until;
 	pid_t pid;
@@ -166,7 +166,7 @@ int dst_log(struct dst *dst, struct jlhead *log)
 
 int dst_nonce(struct dst *dst)
 {
-	sprintf(dst->nonce, "%ld:%llu", time(NULL), conf.idx);
+	snprintf(dst->nonce, sizeof(dst->nonce), "%ld:%llu", time(NULL), conf.idx);
 	return 0;
 }
 
