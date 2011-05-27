@@ -34,8 +34,11 @@ int unpack(const char *nonce, const char *in, int inlen)
 	
 	memset(out, 0, inlen+1);
 	
-	rijndael_setkey(&ctx, conf.key, sizeof(conf.key));
-
+	if(rijndael_setkey(&ctx, conf.key, sizeof(conf.key))) {
+		fprintf(stderr, "rijndael_setkey failed\n");
+		return 1;
+	}
+	
 	rijndael_cfb_dec(&ctx, conf.iv, 
 			 out, in,
 			 inlen/16);
@@ -62,6 +65,9 @@ int main(int argc, char **argv)
 	char *nonce=NULL;
 	unsigned char *msg=NULL, *ivs=NULL;
 	char *value;
+
+	/* same default key: must match default key in apache-netlog.c !! */
+	strcpy((char*)conf.key, "dansahulahula");
 	
 	/* parse options */
 	if(jelopt(argv, 'h', "help", NULL, NULL)) {
