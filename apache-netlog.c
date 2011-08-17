@@ -191,6 +191,10 @@ int deliver()
 	jl_foreach(conf.dsts, dst) {
 		if(dst->disabled_until > time(NULL))
 			continue;
+		if(dst->disabled_until) {
+			dst->disabled_until = 0;
+			syslog(conf.facility|LOG_CRIT, "destination %s reenabled", dst->url);
+		}
 		if(!dst->pid) {
 			if(dst->logid == 0) {
 				if(conf.log->len) {
