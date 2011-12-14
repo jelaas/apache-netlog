@@ -205,7 +205,6 @@ int deliver()
 				/* nothing to do */
 				continue;
 			}
-			var.active++;
 			
 			dst_nonce(dst);
 			if(pipe(fds)) {
@@ -243,10 +242,10 @@ int collect()
 		if(dst->pid == 0)
 			continue;
 		
-		var.active++;
-		
-		if(waitpid(dst->pid, &status, WNOHANG) != dst->pid)
+		if(waitpid(dst->pid, &status, WNOHANG) != dst->pid) {
+			var.active++;			
 			continue;
+		}
 		
 		rc = -1;
 		if(WIFEXITED(status))
@@ -492,6 +491,8 @@ int main(int argc, char **argv)
 					if(pos >= conf.bufsize) {
 						syslog(conf.facility|LOG_ERR, "buffer full: %d", conf.bufsize);
 						buf[conf.bufsize-1] = '\n';
+						buf[conf.bufsize] = 0;
+						pos = conf.bufsize;
 					} else {
 						buf[pos] = 0;
 					}
