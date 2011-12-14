@@ -480,7 +480,7 @@ int main(int argc, char **argv)
 					exit(0);
 				}
 				/* read input */
-				got = read(0, buf+pos, conf.bufsize - pos - 1);
+				got = read(0, buf+pos, conf.bufsize - pos);
 				if(got == 0) {
 					/* EOF parent died */
 					syslog(conf.facility|LOG_ERR, "parent hung up fd 0");
@@ -488,14 +488,7 @@ int main(int argc, char **argv)
 				}
 				if(got > 0) {
 					pos += got;
-					if(pos >= conf.bufsize) {
-						syslog(conf.facility|LOG_ERR, "buffer full: %d", conf.bufsize);
-						buf[conf.bufsize-1] = '\n';
-						buf[conf.bufsize] = 0;
-						pos = conf.bufsize;
-					} else {
-						buf[pos] = 0;
-					}
+					buf[pos] = 0;
 				}
 				
 				/* do we have a whole line? */
