@@ -444,7 +444,8 @@ int main(int argc, char **argv)
 	argc = jelopt_final(argv, &err);
 	
 	if(err) {
-		fprintf(stderr, "Error in options.\n");
+		fprintf(stderr, "apache-netlog: Error in options.\n");
+		syslog(conf.facility|LOG_CRIT, "apache-netlog: Error in options.\n");
 		exit(2);
 	}
 
@@ -452,7 +453,8 @@ int main(int argc, char **argv)
 	
 	/* check configuration */
 	if(conf.dsts->len == 0) {
-		fprintf(stderr, "You must give atleast one destination!\n");
+		fprintf(stderr, "apache-netlog: You must give atleast one destination!\n");
+		syslog(conf.facility|LOG_CRIT, "apache-netlog: You must give atleast one destination!\n");
 		exit(2);
 	}
 	
@@ -460,6 +462,16 @@ int main(int argc, char **argv)
 	buf = malloc(conf.bufsize+1);
 	
 	syslog(conf.facility|LOG_INFO, "apache-netlog startup");
+
+	{
+		/* close stderr. Probably apache error_log */
+		int fd;
+		fd = open("/dev/null", O_WRONLY);
+		if(fd != -1) {
+			dup2(fd, 2);
+			if(fd != 2) close(fd);
+		}
+	}
 	
 	pos = 0;
 	buf[pos] = 0;
