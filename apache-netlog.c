@@ -53,6 +53,7 @@ struct {
 	int maxfail, disabletime_s;
 	int timeout_ms, interval_ms;
 	int bufsize;
+	int synced_writes;
 	
 	/* syslog */
 	int facility;
@@ -98,7 +99,7 @@ int dst_log(struct dst *dst, struct jlhead *log)
 				return 1;
 			}
 		}
-		fd = open(dst->url+7, O_RDWR|O_APPEND|O_CREAT|O_SYNC, 0664);
+		fd = open(dst->url+7, O_RDWR|O_APPEND|O_CREAT|conf.synced_writes, 0664);
 		if(fd == -1) {
 			syslog(conf.facility|LOG_CRIT, "open(\"%s\") failed", dst->url);
 			return 1;
@@ -330,6 +331,7 @@ int main(int argc, char **argv)
 	conf.timeout_ms = 1000;
 	conf.facility = LOG_DAEMON;
 	conf.interval_ms = 10;
+	conf.synced_writes = O_SYNC;
 	
 	if(gethostname(name, sizeof(name))==0) {
 		conf.host = strdup(name);
@@ -355,10 +357,15 @@ int main(int argc, char **argv)
 		       " -I --interval MS       Polling interval when delivery processes are active in milliseconds [10].\n"
 		       " -F --maxfail N         Maximum number of failures before disabling URL [2].\n"
 		       " -B --bufsize N         Set buffer size (for loglines) [4096].\n"
+		       " -S --disablesync      Do not use synchronized writes to filesystem.\n"
 			);
 		exit(0);
 	}
 
+	while(jelopt(argv, 'S', "disablesync",
+		     NULL, &err)) {
+		conf.synced_writes = 0;
+	}
 	while(jelopt_int(argv, 'D', "disabletime",
 		     &ivalue, &err)) {
 		conf.disabletime_s = ivalue;
