@@ -66,7 +66,7 @@ struct {
 struct logentry *log_find(struct jlhead *log, unsigned long long id)
 {
 	struct logentry *logentry;
-	struct jliter *iter;
+	struct jliter iter;
 	
 	for(logentry=jl_iter_init(&iter, log);logentry;logentry=jl_iter(&iter)) {
 		if(logentry->id == id)
