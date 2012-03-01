@@ -1,0 +1,80 @@
+#!/bin/bash
+
+#
+# Configuration: Start
+#
+
+echo "Content-type: text/plain; charset=iso-8859-1"
+echo
+
+KEYFILE=/etc/apache-netlog.key
+LOGDIR=/var/log/netlog
+NETLOGHOME=/usr/bin
+
+#
+# Configuration: End
+#
+
+boundary="${CONTENT_TYPE/#*boundary=/}"
+
+function readparts {
+    while read L; do
+	if [ "$L" = "--$boundary" ]; then
+	    read L
+	    name="${L/#*name=\"/}"
+	    name="${name/\"/}"
+	    read EMPTY
+	    read value
+	    echo "$name=$value"
+	fi
+    done
+}
+parts=$(cat -|tr -d '\r' |readparts)
+
+nonce=$((grep ^nonce= <<EOF|cut -d = -f 2)
+$parts
+EOF
+)
+
+iv=$((grep ^iv= <<EOF|cut -d = -f 2-)
+$parts
+EOF
+)
+msg=$((grep ^msg= <<EOF|cut -d = -f 2-)
+$parts
+EOF
+)
+logfile=$((grep ^logfile= <<EOF|cut -d = -f 2)
+$parts
+EOF
+)
+host=$((grep ^host= <<EOF|cut -d = -f 2)
+$parts
+EOF
+)
+
+if [ ! -e "$NETLOGHOME/apache-netlog-unpack" ]; then
+    logger "apache-netlog: $NETLOGHOME/apache-netlog-unpack not found!"
+    exit 1
+fi
+if [ ! -e "$KEYFILE" ]; then
+    logger "apache-netlog: $KEYFILE not found!"
+    exit 1
+fi
+if [ ! -e "$LOGDIR" ]; then
+    logger "apache-netlog: $LOGDIR not found!"
+    exit 1
+fi
+if [ ! -w "$LOGDIR" ]; then
+    logger "apache-netlog: $LOGDIR not writable!"
+    exit 1
+fi
+
+line=$($NETLOGHOME/apache-netlog-unpack -n "$nonce" -i "$iv" -m "$msg" -f $KEYFILE)
+
+rc=$?
+if [ "$rc" = 0 -a "$host" -a "$logfile" ]; then
+    echo "$line" >> "$LOGDIR/$host-$logfile"
+else
+    logger "apache-netlog: unpack failed: $rc"
+fi
