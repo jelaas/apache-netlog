@@ -460,6 +460,8 @@ int main(int argc, char **argv)
 	
 	syslog(conf.facility|LOG_INFO, "apache-netlog startup");
 
+#if 0
+/* Indication that apache does not like this */
 	{
 		/* close stderr. Probably apache error_log */
 		int fd;
@@ -469,6 +471,7 @@ int main(int argc, char **argv)
 			if(fd != 2) close(fd);
 		}
 	}
+#endif
 	
 	pos = 0;
 	buf[pos] = 0;
