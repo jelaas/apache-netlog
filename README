@@ -1,15 +1,21 @@
 apache-netlog
+Version: 1.9
  Apache custom logger that logs locally and over the network.
  -u --url URL           Add a log destination.
- -H --host              Value host in HTTP POST message.
- -l --logfile           Value of logfile in HTTP POST message.
+ -H --host TEXT         Set value of host in HTTP POST message to TEXT.
+ -l --logfile TEXT      Set value of logfile in HTTP POST message to TEXT.
  -f --keyfile KEYFILE   Shared key for AES encryption in file.
  -k --key KEY           Shared key for AES encryption.
  -a --facility FAC      Syslog facility to use [daemon].
  -D --disabletime S     Disabling time before retry of failed URL in seconds [10].
  -T --timeout MS        Timeout for establishing connection in milliseconds [1000].
- -I --interval MS       Polling interval when delivery processes are active in milliseconds [10].
+ -I --interval MS       Polling interval when delivery processes are active in milliseconds [20].
  -F --maxfail N         Maximum number of failures before disabling URL [2].
+ -B --bufsize N         Set buffer size (for loglines) [4096].
+ -S --disablesync       Do not use synchronized writes to filesystem.
+
+ Example httpd configuration:
+CustomLog "|/usr/bin/apache-netlog -u http://logserver/cgi-bin/netlog -u file:///var/log/httpd/access_log -f /etc/apache-netlog.key" extended
 
 apache-netlog-unpack
  Unpack an encrypted message sent from apache-netlog.
