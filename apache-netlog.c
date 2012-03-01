@@ -330,7 +330,7 @@ int main(int argc, char **argv)
 	conf.disabletime_s = 10;
 	conf.timeout_ms = 1000;
 	conf.facility = LOG_DAEMON;
-	conf.interval_ms = 10;
+	conf.interval_ms = 20;
 	conf.synced_writes = O_SYNC;
 	
 	if(gethostname(name, sizeof(name))==0) {
@@ -354,7 +354,7 @@ int main(int argc, char **argv)
 		       " -a --facility FAC      Syslog facility to use [daemon].\n"
 		       " -D --disabletime S     Disabling time before retry of failed URL in seconds [10].\n"
 		       " -T --timeout MS        Timeout for establishing connection in milliseconds [1000].\n"
-		       " -I --interval MS       Polling interval when delivery processes are active in milliseconds [10].\n"
+		       " -I --interval MS       Polling interval when delivery processes are active in milliseconds [20].\n"
 		       " -F --maxfail N         Maximum number of failures before disabling URL [2].\n"
 		       " -B --bufsize N         Set buffer size (for loglines) [4096].\n"
 		       " -S --disablesync      Do not use synchronized writes to filesystem.\n"
