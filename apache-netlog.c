@@ -2,7 +2,7 @@
  * File: apache-netlog.c
  * Implements: apache piped log receiver that send log messages over the net
  *
- * Copyright: Jens Låås Uppsala University, 2011
+ * Copyright: Jens Låås Uppsala University, 2011, 2012
  * Copyright license: According to GPL, see file COPYING in this directory.
  *
  */
@@ -446,9 +446,11 @@ int main(int argc, char **argv)
 
 	argc = jelopt_final(argv, &err);
 	
+	openlog("apache-netlog", LOG_PID, conf.facility);
+	
 	if(err) {
 		fprintf(stderr, "apache-netlog: Error in options.\n");
-		syslog(conf.facility|LOG_CRIT, "apache-netlog: Error in options.\n");
+		syslog(conf.facility|LOG_CRIT, "Error in options.\n");
 		exit(2);
 	}
 
@@ -457,7 +459,7 @@ int main(int argc, char **argv)
 	/* check configuration */
 	if(conf.dsts->len == 0) {
 		fprintf(stderr, "apache-netlog: You must give atleast one destination!\n");
-		syslog(conf.facility|LOG_CRIT, "apache-netlog: You must give atleast one destination!\n");
+		syslog(conf.facility|LOG_CRIT, "You must give atleast one destination!\n");
 		exit(2);
 	}
 	
