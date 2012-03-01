@@ -306,7 +306,6 @@ int log_add(struct jlhead *log, char *line)
 	memset(logentry, 0, sizeof(struct logentry));
 	logentry->msg = strdup(line);
 	logentry->id = conf.idx;
-	conf.idx++;
 
 	jl_ins(log, logentry);
 	return 0;
@@ -460,8 +459,6 @@ int main(int argc, char **argv)
 	
 	syslog(conf.facility|LOG_INFO, "apache-netlog startup");
 
-#if 0
-/* Indication that apache does not like this */
 	{
 		/* close stderr. Probably apache error_log */
 		int fd;
@@ -471,7 +468,6 @@ int main(int argc, char **argv)
 			if(fd != 2) close(fd);
 		}
 	}
-#endif
 	
 	pos = 0;
 	buf[pos] = 0;
@@ -526,6 +522,7 @@ int main(int argc, char **argv)
 							log_add(dst->log, line);
 						}
 						free(line);
+						conf.idx++;
 					} else {
 						syslog(conf.facility|LOG_CRIT, "malloc of logline failed! message lost!");
 					}
