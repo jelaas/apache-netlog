@@ -30,6 +30,7 @@
 
 struct dst {
 	char *url;
+	struct jlhead *log;
 	char nonce[64];
 	unsigned long long logid;
 	time_t disabled_until;
@@ -41,13 +42,11 @@ struct dst {
 struct logentry {
 	char *msg;
 	unsigned long long id;
-	int deliver_count;
 };
 
 struct {
 	unsigned char key[256/8];
 	struct jlhead *dsts;
-	struct jlhead *log;
 	unsigned long long idx;
 	char *logfile;
 	char *host;
@@ -198,11 +197,11 @@ int deliver()
 		}
 		if(!dst->pid) {
 			if(dst->logid == 0) {
-				if(conf.log->len) {
-					dst->logid = log_first_id(conf.log);
+				if(dst->log->len) {
+					dst->logid = log_first_id(dst->log);
 				}
 			}
-			if(log_find(conf.log, dst->logid) == NULL) {
+			if(log_find(dst->log, dst->logid) == NULL) {
 				/* nothing to do */
 				continue;
 			}
@@ -215,7 +214,7 @@ int deliver()
 			pid = fork();
 			if(pid == 0) {
 				close(fds[0]);
-				_exit(dst_log(dst, conf.log));
+				_exit(dst_log(dst, dst->log));
 			}
 			close(fds[1]);
 			if(pid == -1) {
@@ -254,13 +253,10 @@ int collect()
 		dst->pid = 0;
 		close(dst->pipefd);
 		if(rc == 0) {
-			logentry = log_find(conf.log, dst->logid);
+			logentry = log_find(dst->log, dst->logid);
 			if(logentry) {
-				logentry->deliver_count++;
-				if(logentry->deliver_count >= conf.dsts->len) {
-					jl_del(logentry);
-					free(logentry->msg);
-				}
+				jl_del(logentry);
+				free(logentry->msg);
 			}
 			dst->logid++;
 		} else {
@@ -328,7 +324,6 @@ int main(int argc, char **argv)
 	
 	conf.bufsize = 4096;
 
-	conf.log = jl_new();
 	conf.dsts = jl_new();
 	conf.idx = 1;
 	conf.maxfail = 2;
@@ -396,6 +391,7 @@ int main(int argc, char **argv)
 		memset(dst, 0, sizeof(struct dst));
 		dst->logid = 1;
 		dst->url = value;
+		dst->log = jl_new();
 		if(!conf.logfile) {
 			if(strncmp(value, "file://", 7)==0) {
 				conf.logfile = basename(strdup(value+7));
@@ -523,7 +519,9 @@ int main(int argc, char **argv)
 					
 					/* put logentry in list */
 					if(line) {
-						log_add(conf.log, line);
+						jl_foreach(conf.dsts, dst) {
+							log_add(dst->log, line);
+						}
 						free(line);
 					} else {
 						syslog(conf.facility|LOG_CRIT, "malloc of logline failed! message lost!");
