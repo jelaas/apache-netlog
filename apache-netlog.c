@@ -345,6 +345,7 @@ int main(int argc, char **argv)
 	/* parse options */
 	if(jelopt(argv, 'h', "help", NULL, NULL)) {
 		printf("apache-netlog\n"
+		       "Version: " VERSION "\n"
 		       " Apache custom logger that logs locally and over the network.\n"
 		       " -u --url URL           Add a log destination.\n"
 		       " -H --host TEXT         Set value of host in HTTP POST message to TEXT.\n"
@@ -357,7 +358,10 @@ int main(int argc, char **argv)
 		       " -I --interval MS       Polling interval when delivery processes are active in milliseconds [20].\n"
 		       " -F --maxfail N         Maximum number of failures before disabling URL [2].\n"
 		       " -B --bufsize N         Set buffer size (for loglines) [4096].\n"
-		       " -S --disablesync      Do not use synchronized writes to filesystem.\n"
+		       " -S --disablesync       Do not use synchronized writes to filesystem.\n"
+		       "\n"
+		       " Example httpd configuration:\n"
+		       "CustomLog \"|/usr/bin/apache-netlog -u http://logserver/cgi-bin/netlog -u file:///var/log/httpd/access_log -f /etc/apache-netlog.key\" extended\n"
 			);
 		exit(0);
 	}
