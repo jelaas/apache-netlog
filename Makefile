@@ -1,6 +1,7 @@
 CC=gcc
-CFLAGS=-Wall -Os
-LDFLAGS=-static
+$(eval COMMIT := $(shell git log -1 --pretty=format:%H))
+$(eval VERSION := $(shell git tag -l --contains $(COMMIT)))
+CFLAGS=-Wall -Os -DVERSION=\"$(VERSION)\"
 LDLIBS=-lcurl -lidn  -lrtmp -lssl -lcrypto -lz -ldl -lrt
 all:	apache-netlog apache-netlog-unpack aes
 aes:	aes.o rijndael.o
