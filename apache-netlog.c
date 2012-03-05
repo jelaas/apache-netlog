@@ -61,6 +61,7 @@ struct {
 
 struct {
 	int active;
+	int notdone;
 } var;
 
 struct logentry *log_find(struct jlhead *log, unsigned long long id)
@@ -188,6 +189,7 @@ int deliver()
 	int fds[2];
 
 	var.active = 0;
+	var.notdone = 0;
 	
 	jl_foreach(conf.dsts, dst) {
 		if(dst->disabled_until > time(NULL))
@@ -244,7 +246,7 @@ int collect()
 			continue;
 		
 		if(waitpid(dst->pid, &status, WNOHANG) != dst->pid) {
-			var.active++;			
+			var.active++;
 			continue;
 		}
 		
@@ -260,6 +262,7 @@ int collect()
 				free(logentry->msg);
 			}
 			dst->logid++;
+			var.notdone = 1;
 		} else {
 			dst->failures++;
 			if(dst->failures >= conf.maxfail) {
@@ -486,12 +489,18 @@ int main(int argc, char **argv)
 	buf[pos] = 0;
 	while(1) {
 		int nr_fds;
+		int delay;
 		
 		fds[0].fd = 0;
 		fds[0].events = POLLIN;
 		fds[0].revents = 0;
 		nr_fds = populate_poll(fds);
-		rc = poll(fds, nr_fds, var.active?conf.interval_ms:1000);
+		if(var.notdone) {
+			delay = 0;
+		} else {
+			delay = var.active?conf.interval_ms:1000;
+		}
+		rc = poll(fds, nr_fds, delay);
 		
 		if(rc != 0) {
 			if(fds[0].revents) {
